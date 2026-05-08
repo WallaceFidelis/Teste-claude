@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+    "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>CFBundleDisplayName</key>
+    <string>NFScan</string>
+    <key>CFBundleIdentifier</key>
+    <string>com.nfscan.ios</string>
+    <key>CFBundleVersion</key>
+    <string>1</string>
+    <key>CFBundleShortVersionString</key>
+    <string>1.0</string>
+    <key>NSCameraUsageDescription</key>
+    <string>Necessário para fotografar notas fiscais</string>
+    <key>NSPhotoLibraryUsageDescription</key>
+    <string>Necessário para importar fotos da galeria</string>
+</dict>
+</plist>

@@ -1,0 +1,18 @@
+.gradle/
+build/
+*.iml
+.idea/
+local.properties
+*.DS_Store
+xcuserdata/
+*.xcworkspace/xcuserdata/
+DerivedData/
+*.ipa
+*.dSYM.zip
+
+# NDK / llama.cpp build artefacts
+composeApp/src/androidMain/cpp/llama.cpp/
+composeApp/.cxx/
+
+# Model files (large binaries – distribute separately)
+**/*.gguf

@@ -1,0 +1,39 @@
+CREATE TABLE Receipt (
+    id          INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    supermarket TEXT    NOT NULL,
+    date        TEXT    NOT NULL,
+    total       REAL    NOT NULL,
+    raw_text    TEXT    NOT NULL
+);
+
+CREATE TABLE ReceiptItem (
+    id          INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    receipt_id  INTEGER NOT NULL REFERENCES Receipt(id) ON DELETE CASCADE,
+    name        TEXT    NOT NULL,
+    quantity    REAL    NOT NULL,
+    unit_price  REAL    NOT NULL,
+    total_price REAL    NOT NULL
+);
+
+insertReceipt:
+INSERT INTO Receipt (supermarket, date, total, raw_text)
+VALUES (?, ?, ?, ?);
+
+lastInsertRowId:
+SELECT last_insert_rowid();
+
+insertItem:
+INSERT INTO ReceiptItem (receipt_id, name, quantity, unit_price, total_price)
+VALUES (?, ?, ?, ?, ?);
+
+selectAllReceipts:
+SELECT * FROM Receipt ORDER BY id DESC;
+
+selectReceiptWithItems:
+SELECT r.*, i.name, i.quantity, i.unit_price, i.total_price
+FROM Receipt r
+LEFT JOIN ReceiptItem i ON i.receipt_id = r.id
+WHERE r.id = ?;
+
+deleteReceipt:
+DELETE FROM Receipt WHERE id = ?;
