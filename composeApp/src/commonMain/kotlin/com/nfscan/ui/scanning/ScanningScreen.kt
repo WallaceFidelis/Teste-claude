@@ -42,13 +42,23 @@ fun ScanningScreen(
             Spacer(Modifier.height(24.dp))
 
             Text(
-                text  = when (state) {
+                text = when (state) {
+                    ScanState.LoadingModel   -> "Carregando modelo de IA…"
                     ScanState.ExtractingText -> "Extraindo texto…"
                     ScanState.RunningLlm     -> "Analisando com IA…"
                     else                     -> "Processando…"
                 },
                 style = MaterialTheme.typography.bodyLarge,
             )
+
+            if (state == ScanState.LoadingModel) {
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    text  = "(apenas na primeira execução)",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
         }
     }
 }

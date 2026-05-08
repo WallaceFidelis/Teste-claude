@@ -14,48 +14,74 @@ import kotlinx.coroutines.launch
 
 sealed interface ScanState {
     data object Idle : ScanState
+    data object LoadingModel : ScanState
     data object ExtractingText : ScanState
     data object RunningLlm : ScanState
     data class Success(val receipt: ParsedReceipt) : ScanState
     data class Error(val message: String) : ScanState
 }
 
-private data class ScanSource(val bytes: ByteArray, val isImage: Boolean)
+// plain class avoids ByteArray reference-equality pitfall of data class
+private class ScanSource(val bytes: ByteArray, val isImage: Boolean)
 
 class ReceiptViewModel(
     private val ocrEngine: OcrEngine,
     private val llmEngine: LlmEngine,
+    private val modelPath: String,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow<ScanState>(ScanState.Idle)
     val state: StateFlow<ScanState> = _state.asStateFlow()
 
-    // Set by HomeScreen before navigating to ScanningScreen
     private var pendingSource: ScanSource? = null
+    private var modelReady = false
 
     fun setPendingSource(bytes: ByteArray, isImage: Boolean) {
         pendingSource = ScanSource(bytes, isImage)
     }
 
-    /** Scan using the source stored via [setPendingSource]. */
     fun scan() {
+        // Guard against double-scan if recomposition triggers this again
+        if (_state.value !is ScanState.Idle) return
+
         val source = pendingSource ?: run {
             _state.update { ScanState.Error("Nenhum arquivo selecionado") }
             return
         }
+
         viewModelScope.launch {
+            // ── Step 0: lazy-load model on first use ──────────────────────────
+            if (!modelReady) {
+                _state.update { ScanState.LoadingModel }
+
+                if (modelPath.isEmpty()) {
+                    emitError(IllegalStateException(
+                        "Modelo não encontrado. Consulte models/README.md para instruções de instalação."
+                    ))
+                    return@launch
+                }
+
+                runCatching { llmEngine.load(modelPath) }
+                    .getOrElse { return@launch emitError(it) }
+
+                modelReady = true
+            }
+
+            // ── Step 1: OCR ───────────────────────────────────────────────────
             _state.update { ScanState.ExtractingText }
 
             val rawText = runCatching {
                 ocrEngine.extractText(source.bytes, source.isImage)
             }.getOrElse { return@launch emitError(it) }
 
+            // ── Step 2: LLM ───────────────────────────────────────────────────
             _state.update { ScanState.RunningLlm }
 
             val llmOutput = runCatching {
                 llmEngine.infer(buildPrompt(rawText))
             }.getOrElse { return@launch emitError(it) }
 
+            // ── Step 3: Parse ─────────────────────────────────────────────────
             val receipt = runCatching {
                 parseLlmOutput(llmOutput)
             }.getOrElse { return@launch emitError(it) }
