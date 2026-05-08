@@ -1,0 +1,27 @@
+language = C
+headers = llama.h
+
+package = com.nfscan.cinterop.llama
+
+# ── Compiler options ──────────────────────────────────────────────────────────
+# includeDirs and libraryPaths are injected from build.gradle.kts so that the
+# correct XCFramework slice is used per target (device vs. simulator).
+
+# ── Exposed C surface (subset needed by LlmEngine.ios.kt) ─────────────────────
+# Lifecycle
+# llama_backend_init / llama_backend_free
+# llama_model_default_params / llama_load_model_from_file / llama_free_model
+# llama_context_default_params / llama_new_context_with_model / llama_free
+#
+# Inference
+# llama_kv_cache_clear
+# llama_tokenize
+# llama_batch_get_one
+# llama_decode
+# llama_token_eos
+# llama_token_to_piece
+#
+# Sampling
+# llama_sampler_chain_default_params / llama_sampler_chain_init
+# llama_sampler_chain_add / llama_sampler_free / llama_sampler_sample
+# llama_sampler_init_greedy / llama_sampler_init_temp

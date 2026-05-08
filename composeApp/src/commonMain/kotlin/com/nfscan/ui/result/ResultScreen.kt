@@ -7,16 +7,17 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.nfscan.data.llm.ParsedItem
 import com.nfscan.data.llm.ParsedReceipt
 import com.nfscan.viewmodel.ReceiptViewModel
 import com.nfscan.viewmodel.ScanState
-import org.koin.compose.viewmodel.koinViewModel
 
 @Composable
-fun ResultScreen(onScanAgain: () -> Unit) {
-    val viewModel: ReceiptViewModel = koinViewModel()
+fun ResultScreen(
+    viewModel: ReceiptViewModel,
+    onScanAgain: () -> Unit,
+) {
     val state by viewModel.state.collectAsState()
-
     val receipt = (state as? ScanState.Success)?.receipt
 
     Scaffold(
@@ -24,10 +25,7 @@ fun ResultScreen(onScanAgain: () -> Unit) {
         bottomBar = {
             BottomAppBar {
                 Button(
-                    onClick = {
-                        viewModel.reset()
-                        onScanAgain()
-                    },
+                    onClick  = onScanAgain,
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp),
@@ -35,7 +33,7 @@ fun ResultScreen(onScanAgain: () -> Unit) {
                     Text("Nova Nota")
                 }
             }
-        }
+        },
     ) { padding ->
         if (receipt == null) {
             Box(Modifier.fillMaxSize().padding(padding))
@@ -43,19 +41,12 @@ fun ResultScreen(onScanAgain: () -> Unit) {
         }
 
         LazyColumn(
-            modifier = Modifier.fillMaxSize().padding(padding),
-            contentPadding = PaddingValues(16.dp),
+            modifier        = Modifier.fillMaxSize().padding(padding),
+            contentPadding  = PaddingValues(16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             item { ReceiptHeader(receipt) }
-            items(receipt.items) { item ->
-                ReceiptItemRow(
-                    name = item.name,
-                    qty = item.quantity,
-                    unitPrice = item.unitPrice,
-                    total = item.totalPrice,
-                )
-            }
+            items(receipt.items) { ReceiptItemRow(it) }
             item {
                 HorizontalDivider()
                 Row(
@@ -74,18 +65,22 @@ fun ResultScreen(onScanAgain: () -> Unit) {
 private fun ReceiptHeader(receipt: ParsedReceipt) {
     Column(Modifier.fillMaxWidth().padding(bottom = 8.dp)) {
         Text(receipt.supermarket, style = MaterialTheme.typography.headlineSmall)
-        Text(receipt.date, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(
+            text  = receipt.date,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
         HorizontalDivider(Modifier.padding(vertical = 8.dp))
     }
 }
 
 @Composable
-private fun ReceiptItemRow(name: String, qty: Double, unitPrice: Double, total: Double) {
+private fun ReceiptItemRow(item: ParsedItem) {
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
         Column(Modifier.weight(1f)) {
-            Text(name, style = MaterialTheme.typography.bodyLarge)
-            Text("${qty}x  R$ %.2f".format(unitPrice), style = MaterialTheme.typography.bodySmall)
+            Text(item.name, style = MaterialTheme.typography.bodyLarge)
+            Text("${item.quantity}x  R$ %.2f".format(item.unitPrice), style = MaterialTheme.typography.bodySmall)
         }
-        Text("R$ %.2f".format(total), style = MaterialTheme.typography.bodyLarge)
+        Text("R$ %.2f".format(item.totalPrice), style = MaterialTheme.typography.bodyLarge)
     }
 }

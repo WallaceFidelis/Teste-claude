@@ -8,19 +8,17 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.nfscan.viewmodel.ReceiptViewModel
 import com.nfscan.viewmodel.ScanState
-import org.koin.compose.viewmodel.koinViewModel
 
 @Composable
 fun ScanningScreen(
-    filePath: String,
+    viewModel: ReceiptViewModel,
     onScanComplete: () -> Unit,
     onError: () -> Unit,
 ) {
-    val viewModel: ReceiptViewModel = koinViewModel()
     val state by viewModel.state.collectAsState()
 
-    LaunchedEffect(filePath) {
-        viewModel.scan(filePath)
+    LaunchedEffect(Unit) {
+        viewModel.scan()
     }
 
     LaunchedEffect(state) {
@@ -43,12 +41,14 @@ fun ScanningScreen(
 
             Spacer(Modifier.height(24.dp))
 
-            val label = when (state) {
-                ScanState.ExtractingText -> "Extraindo texto…"
-                ScanState.RunningLlm    -> "Analisando com IA…"
-                else                    -> "Processando…"
-            }
-            Text(label, style = MaterialTheme.typography.bodyLarge)
+            Text(
+                text  = when (state) {
+                    ScanState.ExtractingText -> "Extraindo texto…"
+                    ScanState.RunningLlm     -> "Analisando com IA…"
+                    else                     -> "Processando…"
+                },
+                style = MaterialTheme.typography.bodyLarge,
+            )
         }
     }
 }

@@ -10,6 +10,9 @@ plugins {
     alias(libs.plugins.sqldelight)
 }
 
+// Path to the pre-built llama.cpp XCFramework (built via scripts/build_llama_ios.sh)
+val llamaXcfDir = rootProject.file("third_party/llama-ios.xcframework")
+
 kotlin {
     androidTarget {
         @OptIn(ExperimentalKotlinGradlePluginApi::class)
@@ -18,17 +21,44 @@ kotlin {
         }
     }
 
+    // ── iOS targets ────────────────────────────────────────────────────────────
     listOf(
         iosX64(),
         iosArm64(),
-        iosSimulatorArm64()
+        iosSimulatorArm64(),
     ).forEach { target ->
+        // Pick the correct XCFramework slice for each target
+        val xcfSlice = when (target.name) {
+            "iosArm64"          -> "ios-arm64"
+            else                -> "ios-arm64_x86_64-simulator" // iosX64 + iosSimulatorArm64
+        }
+
+        target.compilations.getByName("main") {
+            cinterops {
+                val llama by creating {
+                    defFile = file("src/iosMain/cinterop/llama.def")
+                    packageName = "com.nfscan.cinterop.llama"
+                    // Headers are inside the XCFramework slice
+                    includeDirs("${llamaXcfDir.absolutePath}/$xcfSlice/Headers")
+                }
+            }
+        }
+
         target.binaries.framework {
             baseName = "ComposeApp"
             isStatic = true
+            // Link the merged static library and required Apple frameworks
+            linkerOpts(
+                "-L${llamaXcfDir.absolutePath}/$xcfSlice",
+                "-lllama",
+                "-framework", "Metal",
+                "-framework", "MetalPerformanceShaders",
+                "-framework", "Accelerate",
+            )
         }
     }
 
+    // ── Source sets ────────────────────────────────────────────────────────────
     sourceSets {
         commonMain.dependencies {
             implementation(compose.runtime)
@@ -51,6 +81,8 @@ kotlin {
             implementation(libs.coroutines.android)
             implementation(libs.koin.android)
             implementation(libs.sqldelight.android.driver)
+            // ML Kit – text recognition (OCR) and PDF rendering
+            implementation(libs.mlkit.text.recognition)
         }
 
         iosMain.dependencies {

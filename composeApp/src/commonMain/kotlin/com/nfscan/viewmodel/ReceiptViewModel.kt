@@ -4,8 +4,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.nfscan.data.llm.LlmEngine
 import com.nfscan.data.llm.ParsedReceipt
+import com.nfscan.data.llm.parseLlmOutput
 import com.nfscan.data.ocr.OcrEngine
-import com.nfscan.data.ocr.OcrResult
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -20,6 +20,8 @@ sealed interface ScanState {
     data class Error(val message: String) : ScanState
 }
 
+private data class ScanSource(val bytes: ByteArray, val isImage: Boolean)
+
 class ReceiptViewModel(
     private val ocrEngine: OcrEngine,
     private val llmEngine: LlmEngine,
@@ -28,52 +30,59 @@ class ReceiptViewModel(
     private val _state = MutableStateFlow<ScanState>(ScanState.Idle)
     val state: StateFlow<ScanState> = _state.asStateFlow()
 
-    fun scan(filePath: String) {
+    // Set by HomeScreen before navigating to ScanningScreen
+    private var pendingSource: ScanSource? = null
+
+    fun setPendingSource(bytes: ByteArray, isImage: Boolean) {
+        pendingSource = ScanSource(bytes, isImage)
+    }
+
+    /** Scan using the source stored via [setPendingSource]. */
+    fun scan() {
+        val source = pendingSource ?: run {
+            _state.update { ScanState.Error("Nenhum arquivo selecionado") }
+            return
+        }
         viewModelScope.launch {
             _state.update { ScanState.ExtractingText }
 
-            val rawText = when (val ocr = runCatching { ocrEngine.extractText(filePath) }) {
-                else -> ocr.getOrElse { return@launch emitError(it) }
-            }
+            val rawText = runCatching {
+                ocrEngine.extractText(source.bytes, source.isImage)
+            }.getOrElse { return@launch emitError(it) }
 
             _state.update { ScanState.RunningLlm }
 
-            val prompt = buildPrompt(rawText)
-            val llmOutput = runCatching { llmEngine.infer(prompt) }
-                .getOrElse { return@launch emitError(it) }
+            val llmOutput = runCatching {
+                llmEngine.infer(buildPrompt(rawText))
+            }.getOrElse { return@launch emitError(it) }
 
-            val receipt = runCatching { parseLlmOutput(llmOutput, rawText) }
-                .getOrElse { return@launch emitError(it) }
+            val receipt = runCatching {
+                parseLlmOutput(llmOutput)
+            }.getOrElse { return@launch emitError(it) }
 
             _state.update { ScanState.Success(receipt) }
         }
     }
 
     fun reset() {
+        pendingSource = null
         _state.update { ScanState.Idle }
     }
 
     private fun emitError(cause: Throwable) {
-        _state.update { ScanState.Error(cause.message ?: "Unknown error") }
+        _state.update { ScanState.Error(cause.message ?: "Erro desconhecido") }
     }
 
     private fun buildPrompt(rawText: String): String = """
-        |Extract the following fields from the supermarket receipt text below.
-        |Return ONLY valid JSON with keys: supermarket, date, total, items (array of {name, qty, unit_price, total_price}).
+        |Extraia as informações da nota fiscal abaixo.
+        |Retorne APENAS JSON válido com as chaves:
+        |  supermarket (string), date (string DD/MM/YYYY), total (number),
+        |  items (array of {name, qty, unit_price, total_price}).
+        |Não inclua texto fora do JSON.
         |
-        |Receipt:
+        |Nota fiscal:
         |$rawText
         |
         |JSON:
     """.trimMargin()
-
-    private fun parseLlmOutput(json: String, rawText: String): ParsedReceipt {
-        // Stub: replace with kotlinx.serialization JSON parsing of LLM output
-        return ParsedReceipt(
-            supermarket = "Unknown",
-            date = "",
-            items = emptyList(),
-            total = 0.0,
-        )
-    }
 }

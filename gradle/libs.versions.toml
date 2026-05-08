@@ -40,6 +40,9 @@ navigation-compose         = { module = "org.jetbrains.androidx.navigation:navig
 # Android
 androidx-activity-compose  = { module = "androidx.activity:activity-compose",               version.ref = "androidx-activity" }
 
+# ML Kit – text recognition (OCR for Android)
+mlkit-text-recognition     = { module = "com.google.mlkit:text-recognition",                version = "16.0.1" }
+
 [bundles]
 koin-common    = ["koin-core", "koin-compose", "koin-compose-viewmodel"]
 sqldelight     = ["sqldelight-runtime", "sqldelight-coroutines"]

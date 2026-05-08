@@ -6,8 +6,9 @@ sealed interface Screen {
     @Serializable
     data object Home : Screen
 
+    // filePath removed – bytes are stored in the shared ViewModel before navigating
     @Serializable
-    data class Scanning(val filePath: String) : Screen
+    data object Scanning : Screen
 
     @Serializable
     data object Result : Screen

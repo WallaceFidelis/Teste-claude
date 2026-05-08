@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<paths>
+    <!-- Temporary files written by the camera capture flow -->
+    <cache-path name="nfscan_captures" path="." />
+</paths>
